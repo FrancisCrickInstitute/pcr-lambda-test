@@ -17,10 +17,10 @@ def lambda_handler(event, context):
     for record in event['Records']:
         bucket = record['s3']['bucket']['name']
         key = unquote_plus(record['s3']['object']['key'])
-        tmpkey = key.replace('/', '')
-        download_path = '/tmp/'+tmpkey
-        s3_client.download_file(bucket, key, download_path)
-        df = pd.read_csv(download_path, usecols=[0, 7, 14, 16, 21], names=[
+        obj = s3_client.get_object(Bucket=bucket, Key=key)
+        body = obj['Body']
+        csv_string = body.read().decode('utf-8')
+        df = pd.read_csv(StringIO(csv_string), usecols=[0, 7, 14, 16, 21], names=[
             "Well Position", "CT", "R(superscript 2)", "Efficiency", "Baseline End"], header=0)
 
         # when Efficiency  value > 90% and < 110%  > set Efficiency Pass to true - this seems to work
@@ -36,12 +36,7 @@ def lambda_handler(event, context):
         df['CT Pass'] = mask
 
         csv_buf = StringIO()
-        df.to_csv(csv_buf, header=None, index=False, encoding='utf-8')
+        df.to_csv(csv_buf, index=False, encoding='utf-8')
         csv_buf.seek(0)
         s3_client.put_object(Bucket='fci-poc-outgoing-data',
-                             Body=csv_buf.getvalue(), Key=tmpkey)
-        if os.path.exists(download_path):
-            os.remove(download_path)
-            print("Removed the file %s" % download_path)
-        else:
-            print("Sorry, file %s does not exist." % download_path)
+                             Body=csv_buf.getvalue(), Key=key)
