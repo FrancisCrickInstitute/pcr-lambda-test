@@ -21,7 +21,7 @@ def lambda_handler(event, context):
         body = obj['Body']
         csv_string = body.read().decode('utf-8')
         df = pd.read_csv(StringIO(csv_string), usecols=[0, 7, 14, 16, 21], names=[
-            "Well Position", "CT", "R(superscript 2)", "Efficiency", "Baseline End"], header=0)
+            "Well Position", "CT", "R(superscript 2)", "Efficiency", "Baseline End"], header=0,  nrows=96)
 
         # when Efficiency  value > 90% and < 110%  > set Efficiency Pass to true - this seems to work
         mask = (df['Efficiency'] > 89) & (df['Efficiency'] < 110) | False
