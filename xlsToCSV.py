@@ -20,14 +20,18 @@ def lambda_handler(event, context):
         tmpkey = key.replace('/', '')
         download_path = '/tmp/'+tmpkey
         s3_client.download_file(bucket, key, download_path)
+        sheets = ['Results', 'Amplification Data']
         data_xls = pd.read_excel(
-            download_path, 'Results', index_col=0, skiprows=40,  header=0)
-        print("test", data_xls)
+            download_path, sheets, index_col=0, skiprows=40,  header=0)
+        df = pd.DataFrame()
+        for sheet in sheets:
+            df = df.append(data_xls[sheet], ignore_index=True, sort=False)
         csv_buf = StringIO()
-        data_xls.to_csv(csv_buf, header=None, index=False, encoding='utf-8')
+        df.to_csv(csv_buf, header=None, index=False, encoding='utf-8')
         csv_buf.seek(0)
         s3_client.put_object(Bucket='fci-working-data',
                              Body=csv_buf.getvalue(), Key=os.path.splitext(tmpkey)[0]+'.csv')
+
         if os.path.exists(download_path):
             os.remove(download_path)
             print("Removed the file %s" % download_path)
